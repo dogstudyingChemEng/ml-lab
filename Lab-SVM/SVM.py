@@ -41,5 +41,7 @@ class SVM(object):
         # TODO: Implement the predict method.
         # Assume self.b, self.alpha, self.support_labels, self.support_vectors, and self.kernel_fn are already set.
         # These attributes will be assigned during SSMO optimization, implemented separately.
+        
+
 
         return scores, pred

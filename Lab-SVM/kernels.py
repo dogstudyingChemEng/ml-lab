@@ -27,7 +27,7 @@ class Linear_kernel(Base_kernel):
     
     def __call__(self, x1, x2):
         # TODO: Implement the linear kernel function
-        
+        y = x1 @ x2.T
         return y
     
     
@@ -40,7 +40,7 @@ class Polynomial_kernel(Base_kernel):
         
     def __call__(self, x1, x2):
         # TODO: Implement the polynomial kernel function
-        
+        y = (x1 @ x2.T + self.c) ** self.degree
         return y
 
 class RBF_kernel(Base_kernel):
@@ -52,5 +52,5 @@ class RBF_kernel(Base_kernel):
         
     def __call__(self, x1, x2):
         # TODO: Implement the RBF kernel function
-
+        y = np.exp(-np.sum((x1[:, np.newaxis, :] - x2[np.newaxis, :, :]) ** 2, axis=2) / (2 * self.sigma ** 2))
         return y
