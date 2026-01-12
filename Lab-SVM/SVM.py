@@ -37,11 +37,11 @@ class SVM(object):
             scores: np.ndarray, shape (n,) - Decision scores, where `scores[i]` is the SVM score for `x[i]`.
             pred: np.ndarray, shape (n,) - Predicted labels, where `pred[i]` is the predicted label for `x[i]`, values in {-1, 1}.
         """
-        
+
         # TODO: Implement the predict method.
         # Assume self.b, self.alpha, self.support_labels, self.support_vectors, and self.kernel_fn are already set.
-        # These attributes will be assigned during SSMO optimization, implemented separately.
-        
-
-
+        # These attributes will be assigned during SSMO optimization, implemented separately
+        kernel_matrix = self.kernel_fn(x, self.support_vectors) 
+        scores = kernel_matrix @ (self.alpha * self.support_labels) + self.b
+        pred = np.where(scores >= 0, 1, -1)
         return scores, pred

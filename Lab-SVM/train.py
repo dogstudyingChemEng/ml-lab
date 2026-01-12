@@ -15,6 +15,8 @@ def train(x_train, y_train):
         svm : Trained SVM model.
     """
     # TODO: Initialize an SVM model and train it with SSMO optimizer with your hyper-parameters.
-
-
+    rbf_kernel = RBF_kernel(sigma=2)
+    svm = SVM(kernel_fn=rbf_kernel)
+    smo_optimizer = SSMO_optimizer(C=1,kkt_thr=1e-6)
+    smo_optimizer.fit(svm,x_train, y_train,max_passes=100000)
     return svm

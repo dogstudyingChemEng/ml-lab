@@ -77,11 +77,32 @@ class SSMO_optimizer():
             for i in range(N):
                 # TODO: implement SSMO algorithm for each pass (One pass means one iteration over the training data)
                 # Hint: 1. First select the two alpha variables to be updated, i.e., alpha[i] and alpha[j], based on the heuristic method in SVM_lab.ipynb.
+                if self.judge_violoate_KKT(x_train[i], y_train[i], self.alpha[i]):
+                    j = np.random.choice([k for k in range(N) if k != i])
                 #       2. Then, use the constraint in the dual form of SVM to express alpha[i] in terms of alpha[j] and optimize the polynomial function of alpha[j].
+                    Ei = self.compute_E(x_train[i], y_train[i])
+                    Ej = self.compute_E(x_train[j], y_train[j])
+                    ai_old = self.alpha[i].copy()
+                    aj_old = self.alpha[j].copy()
+                    L, H = self.compute_L_H(y_train[i] == y_train[j], i, j)
+                    if L == H: continue
+                    eta = self.compute_eta(x_train[i], x_train[j])
+                #       3. Finally, update alpha[i] and alpha[j] based on the optimal solution of alpha[j].
+                    aj_new = self.compute_new_aj(x_train, y_train, i, j, eta, L, H)
+                    if abs(aj_new - aj_old) < 1e-5:
+                        continue
+                    ai_new = self.compute_new_ai(y_train, i, j, aj_new)
+                    b_new = self.compute_new_b(x_train, y_train, i, j, ai_new, aj_new)
+                    self.alpha[i] = ai_new
+                    self.alpha[j] = aj_new
+                    self.b = b_new
+                    num_changed_alphas += 1
+                    self.update_SVM()
+                    #       3. Finally, update alpha[i] and alpha[j] based on the optimal solution of alpha[j].
                 #       3. Finally, update alpha[i] and alpha[j] based on the optimal solution of alpha[j].
                 # Note: 1. Remember to call self.update_SVM() after updating self.b and self.alpha (self.support_vectors and self.support_labels).
                 #       2. If eta is 0., skip this pair of alpha variables. 
-                pass
+                # pass
             
             if verbose: 
                 loss = self.eval_loss(x_train, y_train) # Report the loss after each pass
@@ -168,7 +189,12 @@ class SSMO_optimizer():
             H : The upper bound of **alpha[j]**.
         """
         # TODO: implement compute_L_H. You may use only self.C and self.alpha in this function.
-
+        if not is_yi_equals_yj:
+            L = max(0, self.alpha[j] - self.alpha[i])
+            H = min(self.C, self.C + self.alpha[j] - self.alpha[i])
+        else:
+            L = max(0, self.alpha[i] + self.alpha[j] - self.C)
+            H = min(self.C, self.alpha[i] + self.alpha[j])
         return L, H
         
     def compute_eta(self, xi, xj):
@@ -217,6 +243,14 @@ class SSMO_optimizer():
             # TODO: implement compute_new_aj when eta > 0. 
             # Hint: By setting the first derivative of the dual form objective function to 0, 
             #       one can derive that the unbounded optimal solution of alpha_j_opt is alpha_j_opt = alpha_j_old + y_j * (E_i - E_j) / eta.
+            Ei = self.compute_E(x_train[i], y_train[i])
+            Ej = self.compute_E(x_train[j], y_train[j])
+            aj_new = self.alpha[j] + (y_train[j] * (Ei - Ej) / eta)
+            
+            if aj_new > H:
+                aj_new = H
+            elif aj_new < L:
+                aj_new = L
 
             return aj_new
         else:
@@ -261,10 +295,9 @@ class SSMO_optimizer():
         Return:
             ai_new : Updated value of alpha[i].
         '''
-        
-        
+
         # TODO: implement compute_new_ai. You may only use self.alpha additionally in this function.
-        
+        ai_new = self.alpha[i] + y_train[i] * y_train[j] * (self.alpha[j] - aj_new)
         return ai_new
     
     def compute_new_b(self, x_train, y_train, i, j, ai_new, aj_new):

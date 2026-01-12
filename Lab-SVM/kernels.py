@@ -52,5 +52,14 @@ class RBF_kernel(Base_kernel):
         
     def __call__(self, x1, x2):
         # TODO: Implement the RBF kernel function
-        y = np.exp(-np.sum((x1[:, np.newaxis, :] - x2[np.newaxis, :, :]) ** 2, axis=2) / (2 * self.sigma ** 2))
+        x1 = np.atleast_2d(x1)
+        x2 = np.atleast_2d(x2)
+
+        x12 = np.sum(x1**2, axis=1).reshape(-1, 1)
+        x22 = np.sum(x2**2, axis=1).reshape(1, -1)
+        cross = x1 @ x2.T
+
+        dist = x12 + x22 - 2 * cross
+
+        y = np.exp(-dist / (2 * self.sigma ** 2))
         return y
