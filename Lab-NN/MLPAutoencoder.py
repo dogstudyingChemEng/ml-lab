@@ -15,7 +15,49 @@ class MLPAutoencoder(nn.Module):
         2. Design the decoder to reconstruct the input from the encoded representation.
         3. Ensure the architecture supports end-to-end training.
         '''
-        raise NotImplementedError()
+        self.encoding_dim = encoding_dim
+        self.input_dim = img_channel * img_height * img_width
+        self.img_channel = img_channel
+        self.img_width = img_width
+        self.img_height = img_height
+
+        # self.encoder = nn.Sequential(
+        #     nn.Linear(self.input_dim, 256),
+        #     nn.ReLU(),
+        #     nn.Linear(256, 128),
+        #     nn.ReLU(),
+        #     nn.Linear(128, encoding_dim),
+        # )
+
+        # self.decoder = nn.Sequential(
+        #     nn.Linear(encoding_dim, 128),
+        #     nn.ReLU(),
+        #     nn.Linear(128, 256),
+        #     nn.ReLU(),
+        #     nn.Linear(256, self.input_dim),
+        # )
+
+        # self.net = nn.Sequential(
+        #     self.encoder,
+        #     nn.ReLU(),
+        #     self.decoder,
+        #     nn.Sigmoid()
+        # )
+
+        self.net1 = nn.Sequential(
+            nn.Linear(self.input_dim, 256),
+            nn.ReLU(),
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Linear(128, encoding_dim),
+            nn.ReLU(),
+            nn.Linear(encoding_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, 256),
+            nn.ReLU(),
+            nn.Linear(256, self.input_dim),
+            nn.Sigmoid()
+        )
 
     def forward(self, x):
         '''
@@ -29,8 +71,12 @@ class MLPAutoencoder(nn.Module):
         2. Pass the encoded representation through the decoder.
         3. Return the reconstructed output.
         '''
-        raise NotImplementedError()
-    
+        x = x.view(x.size(0), -1)
+        x = self.net1(x)
+        x = x.view(x.size(0), self.img_channel, self.img_height, self.img_width)
+        return x
+
+
     @property
     def name(self):
         return "MLPAE"

@@ -49,7 +49,11 @@ def train(
             2. Compute the loss based on the difference between the output and the input.
             3. Backpropagate the loss to update the model's parameters.
             '''
-            raise NotImplementedError()
+            outputs = model(images)
+            loss = loss_fn(outputs, images)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
             
             train_losses.append(loss.item())
         avg_train_loss = sum(train_losses) / len(train_losses)
@@ -70,7 +74,8 @@ def train(
                     2. Compute the validation loss.
                     3. Record the loss for analysis.
                     '''
-                    raise NotImplementedError()
+                    outputs = model(images)
+                    loss = loss_fn(outputs, images)
                     
                     valid_losses.append(loss.item())
                 avg_valid_loss = sum(valid_losses) / len(valid_losses)
@@ -83,7 +88,12 @@ def train(
             1. Monitor the validation loss for improvement.
             2. Save the model to the specified path if a new best validation loss is achieved.
             '''
-            raise NotImplementedError()
+            if avg_valid_loss < min_valid_loss:
+                min_valid_loss = avg_valid_loss
+                torch.save(model.state_dict(), os.path.join(model_save_root, save_model_name))
+                no_improve = 0
+            else:
+                no_improve += 1
 
             '''
             TODO: Implement early stopping mechanism.
@@ -92,6 +102,9 @@ def train(
             1. Keep track of validation loss improvements.
             2. Stop training if no improvement is observed for a certain number of checks.
             '''
-            raise NotImplementedError()
+            if no_improve >= early_stopping_patience:
+                break
             
         print(f"Epoch: {epoch}, Train Loss: {avg_train_loss}, Valid Loss: {avg_valid_loss}")
+
+        

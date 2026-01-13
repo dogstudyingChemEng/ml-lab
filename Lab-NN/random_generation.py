@@ -35,9 +35,13 @@ Steps:
 2. Pass the sampled latent vectors through the decoder to generate images.
 3. Ensure the generated images are stored in a tensor `random_images` with shape (10, 3, 24, 24) and are in valid range [0, 1].
 '''
-raise NotImplementedError()
+with torch.no_grad():
+    latent_vectors = torch.randn(10, ENCODING_DIM)
+    
+    random_images = model.decoder(latent_vectors)
+    
+    random_images = torch.clamp(random_images, 0, 1)
 
-# Save the 10 random images in one figure
 fig = plt.figure(figsize=(10, 1))
 
 for i in range(10):

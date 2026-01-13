@@ -11,8 +11,8 @@ from utils.data_processor import create_flower_dataloaders
 
 
 # Set random seed for reproducibility
-np.random.seed(0)
-torch.manual_seed(0)
+np.random.seed(6324)
+torch.manual_seed(6324)
 
 # Basic settings
 data_root = "./flowers"  # Path to the dataset root directory
@@ -20,7 +20,7 @@ model_save_path = "./model/Bestmodel_diffusion.pkl"  # Path to save the trained 
 vis_root = "./vis"
 
 # Hyperparameters (adjustable)
-batch_size = 16  # Batch size for training and validation
+batch_size = 512  # Batch size for training and validation
 num_epochs = 1000  # Number of training epochs
 img_channel = 3
 img_width, img_height = 24, 24
@@ -58,7 +58,30 @@ class Diffuser(nn.Module):
         # TODO: Define an encoder-decoder architecture for epsilon 
         # prediction, and add time step embeddings to condition the 
         # predictions.
-        raise NotImplementedError()
+        self.n_steps = n_steps
+        self.encoder1 = nn.Sequential(
+            nn.Conv2d(img_channels + 1, 64, kernel_size=3, padding=1),
+            # nn.BatchNorm2d(64),
+            nn.ReLU()
+        )
+        self.encoder2 = nn.Sequential(
+            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1), 
+            # nn.BatchNorm2d(128),
+            nn.ReLU()
+        )
+
+        self.bottleneck = nn.Sequential(
+            nn.Conv2d(128, 128, kernel_size=3, padding=1),
+            nn.ReLU()
+        )
+
+        self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True) 
+        self.decoder1 = nn.Sequential(
+            nn.Conv2d(128 + 64, 64, kernel_size=3, padding=1),
+            # nn.BatchNorm2d(64),
+            nn.ReLU()
+        )
+        self.final = nn.Conv2d(64, img_channels, kernel_size=3, padding=1)
 
     def forward(self, x, t):
         """
@@ -72,7 +95,21 @@ class Diffuser(nn.Module):
           - Predicted noise, shape same as x.
         """
         # TODO: Implement the forward computation for a diffusion model
-        raise NotImplementedError()
+        t_normalized = t.float() / self.n_steps
+        t_map = t_normalized.view(-1, 1, 1, 1).expand(-1, 1, x.shape[2], x.shape[3])
+        
+        x = torch.cat([x, t_map], dim=1)
+        h1 = self.encoder1(x)
+        h2 = self.encoder2(h1)
+        
+        h_mid = self.bottleneck(h2)
+        
+        h_up = self.up(h_mid)
+        h_combined = torch.cat([h_up, h1], dim=1) 
+
+        out = self.decoder1(h_combined)
+        return self.final(out)
+        
 
     def sample(self, shape, n_steps):
         """
@@ -114,7 +151,18 @@ class Diffuser(nn.Module):
         # TODO:
         # Predict noise using the model and compute the mean for the reverse process.
         # Add Gaussian noise if t > 0 to simulate the stochastic nature of the process.
-        raise NotImplementedError()
+        eps = self.forward(x, torch.tensor(t, device=x.device).repeat(x.size(0)))
+        alpha_t = alphas[t]
+        one_minus_alpha_bar_t_sqrt = one_minus_alphas_bar_sqrt[t]
+        mean = (1 / torch.sqrt(alpha_t)) * (x - (1 - alpha_t) / one_minus_alpha_bar_t_sqrt * eps)
+        if t > 0:
+            noise = torch.randn_like(x)
+            sigma_t = torch.sqrt(betas[t])
+            x_t_minus_1 = mean + sigma_t * noise
+        else:
+            x_t_minus_1 = mean
+        return x_t_minus_1
+        
 
     def save(self, path):
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -146,7 +194,12 @@ def diffusion_loss_fn(model, x_0):
     # Compute coefficients for x_0 and noise at step t.
     # Generate noisy images using the diffusion forward process.
     # Use the model to predict noise and compute MSE loss.
-    raise NotImplementedError()
+    noise = torch.randn_like(x_0)
+    x_t = alphas_bar_sqrt[t].view(-1, 1, 1, 1) * x_0 + one_minus_alphas_bar_sqrt[t].view(-1, 1, 1, 1) * noise
+    predicted_noise = model(x_t, t)
+    loss = nn.MSELoss()(predicted_noise, noise)
+    return loss
+    
 
 # Sampling function with visualization
 def visualize_sampling(model, sample_shape, n_steps, save_path):
@@ -180,6 +233,12 @@ def visualize_sampling(model, sample_shape, n_steps, save_path):
 
 if __name__ == "__main__":
     # Load data
+    alphas = alphas.to(device)
+    betas = betas.to(device)
+    alphas_bar = alphas_bar.to(device)
+    alphas_bar_sqrt = alphas_bar_sqrt.to(device)
+    one_minus_alphas_bar_sqrt = one_minus_alphas_bar_sqrt.to(device)
+
     training_dataloader, validation_dataloader = create_flower_dataloaders(
         batch_size, data_root, img_width, img_height
     )

@@ -19,8 +19,8 @@ parser.add_argument("--model", type=str, default="AE", choices=["VAE", "AE", "ML
 args = parser.parse_args()
 
 # Set seeds
-torch.manual_seed(0)
-np.random.seed(0)
+torch.manual_seed(114514)
+np.random.seed(114514)
 
 
 data_root = "./flowers"
@@ -30,14 +30,14 @@ batch_size = 16
 num_epochs = 100
 early_stopping_patience = 5
 img_width, img_height = 24, 24
-lr = 1.
+lr = 5e-4
 
 model = Autoencoder(AE_ENCODING_DIM) if args.model == 'AE' \
     else VarAutoencoder(VAE_ENCODING_DIM) if args.model == 'VAE' \
     else MLPAutoencoder(MLPAE_ENCODING_DIM, img_width, img_height)
 loss_fn = VAE_loss_function if args.model == 'VAE' else F.mse_loss
 
-optimizer = optim.SGD(model.parameters(), momentum=0., lr=lr) # TODO: You can change this in Part 3 Step 2, for faster and better convergence.
+optimizer = optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.999), eps=1e-8, weight_decay=1e-4) # TODO: You can change this in Part 3 Step 2, for faster and better convergence.
 scheduler = exponential_decay(initial_learning_rate=lr, decay_rate=0.9, decay_epochs=10) # TODO: You can change this in Part 3 Step 2, for faster and better convergence.
 
 training_dataloader, validation_dataloader = create_flower_dataloaders(batch_size, data_root, img_width, img_height)
